@@ -6,6 +6,49 @@
 > для публичного статического показа может использоваться frontend demo mode без backend и без реальной БД.
 > В таком режиме приложение работает на локальной заглушке с sample-товарами, чтобы можно было открыть список, карточки, редактирование и базовые пользовательские сценарии даже без сервера.
 > Это сделано именно для удобной демонстрации интерфейса. Основной локальный сценарий проекта по-прежнему рассчитан на запуск вместе с backend.
+<div align="center">
+  <a href="https://neuro-board-ai.vercel.app/ads" target="_blank">
+    <img
+      src="https://github.com/Figrac0/Figrac0/blob/main/href.svg"
+      alt="Quick Access - Visit Site"
+      width="50%"
+    />
+  </a>
+</div>
+
+## 📸 Предварительный просмотр
+
+<div align="center">
+  <details>
+    <summary><strong>Показать фото и гифки</strong></summary>
+    <br/>
+  </details>
+</div>
+
+<p align="center">
+
+| 1 | 2 |
+| :---: | :---: |
+| <img src="https://github.com/Figrac0/NeuroBoard-AI/blob/main/git/11.png" width="600"/> | <img src="https://github.com/Figrac0/NeuroBoard-AI/blob/main/git/22.png" width="600"/> |
+| <img src="https://github.com/Figrac0/NeuroBoard-AI/blob/main/git/33.png" width="600"/> | <img src="https://github.com/Figrac0/NeuroBoard-AI/blob/main/git/44.png" width="600"/> |
+
+</p>
+
+<p align="center">
+  <img src="https://github.com/Figrac0/NeuroBoard-AI/blob/main/git/1.gif" width="900"/>
+</p>
+
+<p align="center">
+  <img src="https://github.com/Figrac0/NeuroBoard-AI/blob/main/git/2.gif" width="900"/>
+</p>
+
+<p align="center">
+  <img src="https://github.com/Figrac0/NeuroBoard-AI/blob/main/git/3.gif" width="900"/>
+</p>
+
+<p align="center">
+  <img src="https://github.com/Figrac0/NeuroBoard-AI/blob/main/git/4.gif" width="900"/>
+</p>
 
 Проект реализует тестовое задание для Frontend Internship Spring 2026 и покрывает как обязательную часть, так и дополнительные возможности со звёздочкой. Приложение позволяет просматривать список объявлений, открывать карточку товара, редактировать объявление, получать AI-рекомендации по описанию и цене, а также общаться с AI в контексте конкретного товара.
 
