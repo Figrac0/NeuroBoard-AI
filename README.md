@@ -19,7 +19,9 @@
 ---
 
 <div align="center">
+  
 ## 📸 Предварительный просмотр
+
 </div>
 <div align="center">
   <details>
