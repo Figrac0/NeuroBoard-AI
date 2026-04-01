@@ -22,17 +22,13 @@
   <details>
     <summary><strong>Показать фото и гифки</strong></summary>
     <br/>
-  </details>
-</div>
-
-<p align="center">
 
 | 1 | 2 |
 | :---: | :---: |
 | <img src="https://github.com/Figrac0/NeuroBoard-AI/blob/main/git/11.png" width="600"/> | <img src="https://github.com/Figrac0/NeuroBoard-AI/blob/main/git/22.png" width="600"/> |
 | <img src="https://github.com/Figrac0/NeuroBoard-AI/blob/main/git/33.png" width="600"/> | <img src="https://github.com/Figrac0/NeuroBoard-AI/blob/main/git/44.png" width="600"/> |
 
-</p>
+<br/>
 
 <p align="center">
   <img src="https://github.com/Figrac0/NeuroBoard-AI/blob/main/git/1.gif" width="900"/>
@@ -49,6 +45,9 @@
 <p align="center">
   <img src="https://github.com/Figrac0/NeuroBoard-AI/blob/main/git/4.gif" width="900"/>
 </p>
+
+  </details>
+</div>
 
 Проект реализует тестовое задание для Frontend Internship Spring 2026 и покрывает как обязательную часть, так и дополнительные возможности со звёздочкой. Приложение позволяет просматривать список объявлений, открывать карточку товара, редактировать объявление, получать AI-рекомендации по описанию и цене, а также общаться с AI в контексте конкретного товара.
 
