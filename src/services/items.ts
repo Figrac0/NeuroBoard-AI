@@ -1,5 +1,13 @@
 import { z } from 'zod'
 
+import { env } from '@/lib/env'
+import {
+  getDemoItemById,
+  getDemoItems,
+  getDemoItemsTotal,
+  updateDemoItem,
+} from '@/mocks/demo-items'
+import { ApiError } from '@/services/api'
 import { withRevisionMeta } from '@/lib/revision'
 import { apiRequest } from '@/services/api'
 import type {
@@ -130,6 +138,41 @@ function normalizeItem(rawItem: z.infer<typeof rawItemSchema>): Item {
   })
 }
 
+function shouldUseDemoFallback(error: unknown): boolean {
+  if (env.forceDemoMode) {
+    return true
+  }
+
+  if (!env.enableDemoFallback) {
+    return false
+  }
+
+  if (error instanceof ApiError) {
+    return [404, 500, 502, 503, 504].includes(error.status)
+  }
+
+  return error instanceof Error
+}
+
+function applyDemoFilters(
+  items: Item[],
+  filters: {
+    query?: string
+    categories?: Category[]
+  },
+): Item[] {
+  const normalizedQuery = filters.query?.trim().toLowerCase()
+
+  return items.filter((item) => {
+    const matchesQuery = normalizedQuery ? item.title.toLowerCase().includes(normalizedQuery) : true
+    const matchesCategory = filters.categories?.length
+      ? filters.categories.includes(item.category)
+      : true
+
+    return matchesQuery && matchesCategory
+  })
+}
+
 export async function getAllItems(
   filters: {
     query?: string
@@ -137,60 +180,102 @@ export async function getAllItems(
   },
   signal?: AbortSignal,
 ): Promise<Item[]> {
+  if (env.forceDemoMode) {
+    return applyDemoFilters(getDemoItems(), filters)
+  }
+
   const items: Item[] = []
   const pageSize = 50
   let skip = 0
   let total = Number.POSITIVE_INFINITY
 
   while (items.length < total) {
-    const response = await apiRequest<unknown>('/items', {
-      signal,
-      query: {
-        q: filters.query || undefined,
-        categories: filters.categories?.length ? filters.categories.join(',') : undefined,
-        limit: pageSize,
-        skip,
-      },
-    })
-    const parsed = listResponseSchema.parse(response)
-    total = parsed.total
-    items.push(...parsed.items.map(normalizeItem))
+    try {
+      const response = await apiRequest<unknown>('/items', {
+        signal,
+        query: {
+          q: filters.query || undefined,
+          categories: filters.categories?.length ? filters.categories.join(',') : undefined,
+          limit: pageSize,
+          skip,
+        },
+      })
+      const parsed = listResponseSchema.parse(response)
+      total = parsed.total
+      items.push(...parsed.items.map(normalizeItem))
 
-    if (parsed.items.length < pageSize) {
-      break
+      if (parsed.items.length < pageSize) {
+        break
+      }
+
+      skip += pageSize
+    } catch (error) {
+      if (shouldUseDemoFallback(error)) {
+        return applyDemoFilters(getDemoItems(), filters)
+      }
+
+      throw error
     }
-
-    skip += pageSize
   }
 
   return items
 }
 
 export async function getItemsTotal(signal?: AbortSignal): Promise<number> {
-  const response = await apiRequest<unknown>('/items', {
-    signal,
-    query: {
-      limit: 1,
-      skip: 0,
-    },
-  })
+  if (env.forceDemoMode) {
+    return getDemoItemsTotal()
+  }
 
-  return listResponseSchema.parse(response).total
+  try {
+    const response = await apiRequest<unknown>('/items', {
+      signal,
+      query: {
+        limit: 1,
+        skip: 0,
+      },
+    })
+
+    return listResponseSchema.parse(response).total
+  } catch (error) {
+    if (shouldUseDemoFallback(error)) {
+      return getDemoItemsTotal()
+    }
+
+    throw error
+  }
 }
 
 export async function getItemById(id: string, signal?: AbortSignal): Promise<Item> {
-  const response = await apiRequest<unknown>(`/items/${id}`, { signal })
-  const parsed = detailResponseSchema.parse(response)
-
-  if ('item' in parsed) {
-    return normalizeItem(parsed.item)
+  if (env.forceDemoMode) {
+    const demoItem = getDemoItemById(id)
+    if (demoItem) {
+      return demoItem
+    }
   }
 
-  if ('items' in parsed) {
-    return normalizeItem(parsed.items[0])
-  }
+  try {
+    const response = await apiRequest<unknown>(`/items/${id}`, { signal })
+    const parsed = detailResponseSchema.parse(response)
 
-  return normalizeItem(parsed)
+    if ('item' in parsed) {
+      return normalizeItem(parsed.item)
+    }
+
+    if ('items' in parsed) {
+      return normalizeItem(parsed.items[0])
+    }
+
+    return normalizeItem(parsed)
+  } catch (error) {
+    if (shouldUseDemoFallback(error)) {
+      const demoItem = getDemoItemById(id)
+      if (demoItem) {
+        return demoItem
+      }
+    }
+
+    throw error
+  }
 }
 
 export async function updateItem(
@@ -198,28 +283,40 @@ export async function updateItem(
   payload: ItemUpdateInput,
   signal?: AbortSignal,
 ): Promise<Item | undefined> {
-  const response = await apiRequest<unknown>(`/items/${id}`, {
-    method: 'PUT',
-    json: payload,
-    signal,
-  })
-
-  if (!response) {
-    return undefined
+  if (env.forceDemoMode) {
+    return updateDemoItem(id, payload)
   }
 
-  const parsed = detailResponseSchema.safeParse(response)
-  if (!parsed.success) {
-    return undefined
-  }
+  try {
+    const response = await apiRequest<unknown>(`/items/${id}`, {
+      method: 'PUT',
+      json: payload,
+      signal,
+    })
 
-  if ('item' in parsed.data) {
-    return normalizeItem(parsed.data.item)
-  }
+    if (!response) {
+      return undefined
+    }
 
-  if ('items' in parsed.data) {
-    return normalizeItem(parsed.data.items[0])
-  }
+    const parsed = detailResponseSchema.safeParse(response)
+    if (!parsed.success) {
+      return undefined
+    }
 
-  return normalizeItem(parsed.data)
+    if ('item' in parsed.data) {
+      return normalizeItem(parsed.data.item)
+    }
+
+    if ('items' in parsed.data) {
+      return normalizeItem(parsed.data.items[0])
+    }
+
+    return normalizeItem(parsed.data)
+  } catch (error) {
+    if (shouldUseDemoFallback(error)) {
+      return updateDemoItem(id, payload)
+    }
+
+    throw error
+  }
 }
