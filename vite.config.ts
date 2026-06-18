@@ -25,6 +25,10 @@ export default defineConfig(({ mode }) => {
           target: apiProxyTarget,
           changeOrigin: true,
         },
+        '/memory': {
+          target: apiProxyTarget,
+          changeOrigin: true,
+        },
       },
     },
     test: {

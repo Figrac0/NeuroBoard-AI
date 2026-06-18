@@ -26,6 +26,9 @@ export function AppShell({ children }: PropsWithChildren) {
         </Link>
 
         <div className="app-header__actions">
+          <Link to="/lab" className="button button--secondary button--small">
+            {language === 'ru' ? 'Harness Lab' : 'Harness Lab'}
+          </Link>
           <LanguageToggle />
           <ThemeToggle />
         </div>

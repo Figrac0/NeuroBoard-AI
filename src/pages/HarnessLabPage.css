@@ -1,0 +1,53 @@
+/* Harness Lab — стили витрины evals. Используют дизайн-токены из index.css. */
+
+.harness-lab .lab-config-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.lab-error {
+  margin: 12px 0 0;
+  color: var(--danger);
+  font-size: 13px;
+}
+
+.lab-cells-heading {
+  margin-top: 20px;
+}
+
+.lab-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.lab-table th,
+.lab-table td {
+  padding: 8px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+.lab-table th {
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.03em;
+}
+
+.lab-table td:not(:first-child),
+.lab-table th:not(:first-child) {
+  text-align: right;
+}
+
+.lab-table__row--best {
+  background: rgba(42, 169, 90, 0.1);
+}
+
+.lab-table__row--best td:first-child {
+  font-weight: 700;
+  color: var(--success);
+}

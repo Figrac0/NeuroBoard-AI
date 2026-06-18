@@ -1,0 +1,9 @@
+{
+  "name": "avito-test-server",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.mjs"
+  }
+}

@@ -1,0 +1,25 @@
+// zellij alternative to tmux. zellij has built-in session resurrection:
+//   zellij --layout infra/zellij-layout.kdl     # start
+//   zellij attach <name>                         # reattach after SSH drop
+//   zellij list-sessions / zellij a --create     # sessions persist on disk (resurrectable)
+//
+// Worktrees are still created by infra/spawn-agents.sh; this is just the multiplexer layout.
+layout {
+    tab name="control" focus=true {
+        pane {
+            command "bash"
+            args "-lc" "cat infra/tasks/QUEUE.md; exec bash"
+        }
+    }
+    tab name="agents" {
+        pane split_direction="vertical" {
+            pane name="agent-1" cwd=".worktrees/agent-1" { command "claude"; }
+            pane name="agent-2" cwd=".worktrees/agent-2" { command "claude"; }
+            pane name="agent-3" cwd=".worktrees/agent-3" { command "claude"; }
+        }
+        pane split_direction="vertical" {
+            pane name="agent-4" cwd=".worktrees/agent-4" { command "claude"; }
+            pane name="agent-5" cwd=".worktrees/agent-5" { command "claude"; }
+        }
+    }
+}

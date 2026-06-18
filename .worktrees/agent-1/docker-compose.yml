@@ -1,0 +1,18 @@
+services:
+  server:
+    build:
+      context: ./server
+    ports:
+      - '8080:8080'
+
+  client:
+    build:
+      context: .
+    environment:
+      VITE_API_PROXY_TARGET: http://server:8080
+      VITE_OLLAMA_URL: http://host.docker.internal:11434
+      VITE_OLLAMA_MODEL: llama3.1:8b
+    ports:
+      - '5173:5173'
+    depends_on:
+      - server

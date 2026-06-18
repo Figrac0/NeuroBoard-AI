@@ -4,6 +4,7 @@ import { AppShell } from '@/components/AppShell'
 import { AdDetailsPage } from '@/pages/AdDetailsPage'
 import { AdEditPage } from '@/pages/AdEditPage'
 import { AdsListPage } from '@/pages/AdsListPage'
+import { HarnessLabPage } from '@/pages/HarnessLabPage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
 
 function App() {
@@ -15,6 +16,7 @@ function App() {
           <Route path="/ads" element={<AdsListPage />} />
           <Route path="/ads/:id" element={<AdDetailsPage />} />
           <Route path="/ads/:id/edit" element={<AdEditPage />} />
+          <Route path="/lab" element={<HarnessLabPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </AppShell>

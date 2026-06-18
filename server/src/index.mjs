@@ -5,6 +5,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { createSeedItems } from './seed-data.mjs'
+import { recallZep, rememberZep } from './zep-memory.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const DATA_DIR = join(__dirname, '..', 'data')
@@ -25,7 +26,7 @@ function sendJson(response, statusCode, payload) {
   response.writeHead(statusCode, {
     'Content-Type': 'application/json; charset=utf-8',
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET,PUT,OPTIONS',
+    'Access-Control-Allow-Methods': 'GET,POST,PUT,OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
   })
   response.end(JSON.stringify(payload, null, 2))
@@ -35,7 +36,7 @@ function sendBinary(response, statusCode, payload, contentType) {
   response.writeHead(statusCode, {
     'Content-Type': contentType,
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET,PUT,OPTIONS',
+    'Access-Control-Allow-Methods': 'GET,POST,PUT,OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
   })
   response.end(payload)
@@ -44,7 +45,7 @@ function sendBinary(response, statusCode, payload, contentType) {
 function sendEmpty(response, statusCode) {
   response.writeHead(statusCode, {
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET,PUT,OPTIONS',
+    'Access-Control-Allow-Methods': 'GET,POST,PUT,OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
   })
   response.end()
@@ -302,6 +303,29 @@ const server = createServer(async (request, response) => {
       await writeItems(items)
 
       sendJson(response, 200, { item: withRevision(nextItem) })
+      return
+    }
+
+    if (request.method === 'POST' && path === '/memory/remember') {
+      const body = await parseBody(request)
+      const saved = await rememberZep(body)
+      if (saved) {
+        sendJson(response, 200, { record: saved })
+      } else {
+        sendJson(response, 501, { message: 'Zep memory is not configured (set ZEP_API_KEY).' })
+      }
+      return
+    }
+
+    if (request.method === 'POST' && path === '/memory/recall') {
+      const body = await parseBody(request)
+      const records = await recallZep(body || {})
+      sendJson(response, 200, { records })
+      return
+    }
+
+    if (request.method === 'POST' && path === '/memory/clear') {
+      sendJson(response, 200, { ok: true })
       return
     }
 

@@ -1,18 +1,18 @@
+import { createConfiguredModelClient } from '@/agent-harness/config'
+import { type ModelClient } from '@/agent-harness/model-client'
+import { isAbortError } from '@/lib/format'
 import { getCategoryLabel, getFieldConfig } from '@/lib/item-config'
-import { env } from '@/lib/env'
 import type {
   AdChatMessage,
+  Category,
   DescriptionSuggestion,
+  FormParamValues,
   ItemFormValues,
   Language,
   PriceSuggestion,
 } from '@/types/items'
 
-interface OllamaResponse {
-  response?: string
-}
-
-function serializeAdContext(values: ItemFormValues, language: Language): string {
+export function serializeAdContext(values: ItemFormValues, language: Language): string {
   const params = getFieldConfig(values.category, language)
     .map((field) => {
       const value = values.params[field.key]?.trim()
@@ -48,44 +48,43 @@ function serializeAdContext(values: ItemFormValues, language: Language): string 
   ].join('\n\n')
 }
 
-async function requestOllama(
+// Общий клиент модели (Ollama или OmniRoute) создаётся лениво из env.
+// Существующие AI-функции ходят через него и получают сменный провайдер плюс
+// учёт токенов, но их сигнатуры и поведение для UI остаются прежними.
+let sharedClient: ModelClient | null = null
+
+function getModelClient(): ModelClient {
+  if (!sharedClient) {
+    sharedClient = createConfiguredModelClient()
+  }
+
+  return sharedClient
+}
+
+async function requestModel(
   prompt: string,
   language: Language,
   signal?: AbortSignal,
 ): Promise<string> {
-  const response = await fetch(`${env.ollamaUrl}/api/generate`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: env.ollamaModel,
-      stream: false,
-      prompt,
-      options: {
-        temperature: 0.35,
-      },
-    }),
-    signal,
-  })
+  try {
+    const result = await getModelClient().complete({
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.35,
+      signal,
+    })
 
-  if (!response.ok) {
+    return result.text
+  } catch (error) {
+    if (isAbortError(error)) {
+      throw error
+    }
+
     throw new Error(
       language === 'ru'
-        ? 'Не удалось обратиться к Ollama. Проверьте, что сервис запущен локально.'
-        : 'Failed to reach Ollama. Make sure the local service is running.',
+        ? 'Не удалось получить ответ от модели. Проверьте, что провайдер LLM доступен.'
+        : 'Failed to get a model response. Make sure the LLM provider is available.',
     )
   }
-
-  const payload = (await response.json()) as OllamaResponse
-
-  if (!payload.response?.trim()) {
-    throw new Error(
-      language === 'ru' ? 'Модель вернула пустой ответ.' : 'The model returned an empty response.',
-    )
-  }
-
-  return payload.response.trim()
 }
 
 function extractJsonBlock(value: string): string | null {
@@ -109,7 +108,10 @@ function cleanReasoning(value: string, language: Language): string {
     : 'The model estimated the price using the current listing details.'
 }
 
-function parsePriceSuggestionFromText(rawText: string, language: Language): PriceSuggestion | null {
+export function parsePriceSuggestionFromText(
+  rawText: string,
+  language: Language,
+): PriceSuggestion | null {
   const jsonBlock = extractJsonBlock(rawText)
 
   if (jsonBlock) {
@@ -171,14 +173,9 @@ function parsePriceSuggestionFromText(rawText: string, language: Language): Pric
   }
 }
 
-export async function improveDescription(
-  values: ItemFormValues,
-  signal?: AbortSignal,
-  language: Language = 'ru',
-): Promise<DescriptionSuggestion> {
-  const prompt =
-    language === 'en'
-      ? `
+export function buildImproveDescriptionPrompt(values: ItemFormValues, language: Language): string {
+  return language === 'en'
+    ? `
 You improve marketplace listings.
 Reply only in English.
 Keep only facts from the listing and never invent missing attributes.
@@ -192,7 +189,7 @@ ${serializeAdContext(values, language)}
 
 Return only the final description text.
 `.trim()
-      : `
+    : `
 Ты помогаешь улучшать объявления на Авито.
 Работай на русском языке.
 Сохраняй только факты из карточки и не придумывай новые характеристики.
@@ -206,11 +203,21 @@ ${serializeAdContext(values, language)}
 
 Верни только готовый текст описания.
 `.trim()
+}
 
-  const text = await requestOllama(prompt, language, signal)
+export function extractDescriptionText(text: string): string {
+  return text.replace(/^["']|["']$/g, '').trim()
+}
+
+export async function improveDescription(
+  values: ItemFormValues,
+  signal?: AbortSignal,
+  language: Language = 'ru',
+): Promise<DescriptionSuggestion> {
+  const text = await requestModel(buildImproveDescriptionPrompt(values, language), language, signal)
 
   return {
-    text: text.replace(/^["']|["']$/g, '').trim(),
+    text: extractDescriptionText(text),
   }
 }
 
@@ -269,17 +276,12 @@ ${question}
 Верни только ответ ассистента.
 `.trim()
 
-  return requestOllama(prompt, language, signal)
+  return requestModel(prompt, language, signal)
 }
 
-export async function estimateMarketPrice(
-  values: ItemFormValues,
-  signal?: AbortSignal,
-  language: Language = 'ru',
-): Promise<PriceSuggestion> {
-  const prompt =
-    language === 'en'
-      ? `
+export function buildPriceEstimatePrompt(values: ItemFormValues, language: Language): string {
+  return language === 'en'
+    ? `
 You estimate a fair market price for a listing in Russia.
 If the data is incomplete, use a cautious range and explain the uncertainty.
 Return only JSON and nothing else.
@@ -295,7 +297,7 @@ Response format:
 Listing:
 ${serializeAdContext(values, language)}
 `.trim()
-      : `
+    : `
 Ты оцениваешь рыночную цену объявления для России.
 Если данных мало, выбери осторожный диапазон и поясни неопределённость.
 Верни только JSON без пояснений вне JSON.
@@ -311,8 +313,14 @@ ${serializeAdContext(values, language)}
 Карточка объявления:
 ${serializeAdContext(values, language)}
 `.trim()
+}
 
-  const rawText = await requestOllama(prompt, language, signal)
+export async function estimateMarketPrice(
+  values: ItemFormValues,
+  signal?: AbortSignal,
+  language: Language = 'ru',
+): Promise<PriceSuggestion> {
+  const rawText = await requestModel(buildPriceEstimatePrompt(values, language), language, signal)
   const suggestion = parsePriceSuggestionFromText(rawText, language)
 
   if (!suggestion) {
@@ -324,4 +332,143 @@ ${serializeAdContext(values, language)}
   }
 
   return suggestion
+}
+
+// --- Заголовок ------------------------------------------------------------
+
+export function buildTitlePrompt(values: ItemFormValues, language: Language): string {
+  return language === 'en'
+    ? `You write concise marketplace titles.
+Create a clear, specific title (max 60 characters) for this listing using only its facts.
+Return only the title text, without quotes.
+
+Listing:
+${serializeAdContext(values, language)}`
+    : `Ты пишешь короткие заголовки для объявлений на Авито.
+Составь точный, понятный заголовок (до 60 символов) на основе фактов карточки.
+Верни только текст заголовка, без кавычек.
+
+Карточка:
+${serializeAdContext(values, language)}`
+}
+
+export function extractTitle(text: string): string {
+  return (text.split('\n')[0] ?? '')
+    .replace(/^["']|["']$/g, '')
+    .trim()
+    .slice(0, 80)
+}
+
+// --- Характеристики (params категории) ------------------------------------
+
+export function buildAttributesPrompt(values: ItemFormValues, language: Language): string {
+  const isEn = language === 'en'
+  const schema = getFieldConfig(values.category, language)
+    .map((field) => {
+      if (field.type === 'select') {
+        const options = field.options?.map((option) => option.value).join(' | ') ?? ''
+        return `- "${field.key}" (${field.label}): ${isEn ? 'one of' : 'одно из'} [${options}]`
+      }
+      const kind = field.type === 'number' ? (isEn ? 'number' : 'число') : isEn ? 'text' : 'текст'
+      return `- "${field.key}" (${field.label}): ${kind}`
+    })
+    .join('\n')
+
+  return isEn
+    ? `You extract structured attributes for a marketplace listing.
+Infer attributes ONLY from the title and description below. If you are not confident about a field, omit it.
+For select fields use exactly one of the allowed values.
+Return ONLY a JSON object with these keys (omit the ones you cannot infer):
+${schema}
+
+Listing:
+${serializeAdContext(values, language)}`
+    : `Ты извлекаешь характеристики для карточки объявления.
+Выводи характеристики ТОЛЬКО из названия и описания ниже. Если не уверен в значении — пропусти поле.
+Для полей-списков используй ровно одно из допустимых значений.
+Верни ТОЛЬКО JSON-объект с этими ключами (неизвестные пропусти):
+${schema}
+
+Карточка:
+${serializeAdContext(values, language)}`
+}
+
+export function parseAttributes(
+  rawText: string,
+  category: Category,
+  language: Language = 'ru',
+): FormParamValues {
+  const result: FormParamValues = {}
+  const block = extractJsonBlock(rawText)
+
+  if (!block) {
+    return result
+  }
+
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(block)
+  } catch {
+    return result
+  }
+
+  if (typeof parsed !== 'object' || parsed === null) {
+    return result
+  }
+
+  const source = parsed as Record<string, unknown>
+
+  for (const field of getFieldConfig(category, language)) {
+    const raw = source[field.key]
+    if (raw == null) {
+      continue
+    }
+
+    const value = String(raw).trim()
+    if (!value) {
+      continue
+    }
+
+    if (field.type === 'select') {
+      const match = field.options?.find(
+        (option) => option.value === value || option.label === value,
+      )
+      if (!match) {
+        continue
+      }
+      result[field.key] = match.value
+    } else {
+      result[field.key] = value
+    }
+  }
+
+  return result
+}
+
+// --- Категория ------------------------------------------------------------
+
+const CATEGORY_VALUES: Category[] = ['auto', 'real_estate', 'electronics']
+
+export function buildCategoryPrompt(values: ItemFormValues, language: Language): string {
+  return language === 'en'
+    ? `Classify this listing into exactly one category id: auto, real_estate, electronics.
+Return ONLY the category id.
+
+Listing:
+${serializeAdContext(values, language)}`
+    : `Определи категорию объявления — ровно один id: auto, real_estate, electronics.
+Верни ТОЛЬКО id категории.
+
+Карточка:
+${serializeAdContext(values, language)}`
+}
+
+export function parseCategory(rawText: string): Category | null {
+  const lower = rawText.toLowerCase()
+  for (const candidate of CATEGORY_VALUES) {
+    if (lower.includes(candidate)) {
+      return candidate
+    }
+  }
+  return null
 }

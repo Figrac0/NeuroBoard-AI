@@ -12,8 +12,10 @@ import { LoadingState } from '@/components/LoadingState'
 import { SelectField } from '@/components/SelectField'
 import { StatusBanner } from '@/components/StatusBanner'
 import { RevisionChecklist } from '@/features/ads/RevisionChecklist'
+import { AgentHarnessPanel } from '@/features/edit/AgentHarnessPanel'
 import { DescriptionDiff } from '@/features/edit/DescriptionDiff'
 import { DynamicParamFields } from '@/features/edit/DynamicParamFields'
+import { useAgentHarness } from '@/features/edit/useAgentHarness'
 import { useDraftSync } from '@/features/edit/useDraftSync'
 import {
   buildItemUpdateInput,
@@ -38,6 +40,20 @@ import type {
   ItemFormValues,
   PriceSuggestion,
 } from '@/types/items'
+
+// загружает объявление
+// превращает его в значения формы
+// позволяет редактировать базовые поля и параметры категории
+// показывает недостающие поля
+// автосохраняет черновик
+// вызывает AI для описания
+// вызывает AI для цены
+// поддерживает AI-чат
+// отправляет PUT /items/:id
+
+// управляется react-hook-form
+// валидируется через zodResolver(schema)
+// схема строится в forms.ts
 
 export function AdEditPage() {
   const { id = '' } = useParams()
@@ -69,10 +85,12 @@ export function AdEditPage() {
   const chatHistoryRef = useRef<HTMLDivElement | null>(null)
 
   const form = useForm<ItemFormValues>({
-    resolver: zodResolver(schema),
+    resolver: zodResolver(schema), //валидация
     mode: 'onBlur',
     defaultValues: EMPTY_FORM_VALUES,
   })
+
+  const agentHarness = useAgentHarness({ form, language })
 
   const itemQuery = useQuery({
     queryKey: ['item', id],
@@ -749,6 +767,8 @@ export function AdEditPage() {
             ) : null}
           </div>
         </section>
+
+        <AgentHarnessPanel harness={agentHarness} language={language} />
 
         <div className="page-actions">
           <button
