@@ -46,5 +46,11 @@ export function createDefaultEvalConfigs(): EvalConfig[] {
       client: createOllamaClient({ url: env.ollamaUrl, model: env.ollamaModel }),
       policy: DEFAULT_POLICY,
     },
+    {
+      id: 'ollama-naive',
+      label: `Ollama ${env.ollamaModel} (naive)`,
+      client: createOllamaClient({ url: env.ollamaUrl, model: env.ollamaModel }),
+      policy: NAIVE_POLICY,
+    },
   ]
 }

@@ -1,6 +1,6 @@
 # NeuroBoard AI — seller dashboard + продвинутый agentic harness
 
-Личный кабинет продавца с AI-ассистентом для объявлений на Авито, **расширенный до демонстрации
+Личный кабинет продавца с AI-ассистентом для объявлений, **расширенный до демонстрации
 продвинутого agentic harness**. Базовое приложение (каталог, карточка, форма, AI-помощь по описанию и
 цене) играет роль «бизнеса», которым управляет автономный агент: harness превращает **цель** в **план**,
 исполняет шаги под контролем (ретраи, таймаут, бюджет токенов), **проверяет** результат, **откатывает**
@@ -11,6 +11,7 @@
 > для публичного статического показа может использоваться frontend demo mode без backend и без реальной БД.
 > В таком режиме приложение работает на локальной заглушке с sample-товарами, чтобы можно было открыть список, карточки, редактирование и базовые пользовательские сценарии даже без сервера.
 > Это сделано именно для удобной демонстрации интерфейса. Основной локальный сценарий проекта по-прежнему рассчитан на запуск вместе с backend.
+
 <div align="center">
   <a href="https://neuro-board-ai.vercel.app/ads" target="_blank">
     <img
@@ -33,8 +34,8 @@
     <summary><strong>Показать фото и гифки</strong></summary>
     <br/>
 
-| 1 | 2 |
-| :---: | :---: |
+|                                           1                                            |                                           2                                            |
+| :------------------------------------------------------------------------------------: | :------------------------------------------------------------------------------------: |
 | <img src="https://github.com/Figrac0/NeuroBoard-AI/blob/main/git/11.png" width="600"/> | <img src="https://github.com/Figrac0/NeuroBoard-AI/blob/main/git/22.png" width="600"/> |
 | <img src="https://github.com/Figrac0/NeuroBoard-AI/blob/main/git/33.png" width="600"/> | <img src="https://github.com/Figrac0/NeuroBoard-AI/blob/main/git/44.png" width="600"/> |
 
@@ -91,11 +92,11 @@
 
 ## Три экспоната harness
 
-| Экспонат | Что показывает | Где |
-| --- | --- | --- |
-| **Свой harness** | цель → план → действия → проверка → рефайн → эскалация → rollback, память, автозаполнение всех полей товара | `src/agent-harness/`, панель в форме `/ads/:id/edit` |
-| **Eval Lab** | измеримое сравнение «модель × политика harness»: avg score, success-rate, токены | страница `/lab` |
-| **Параллельная оркестрация** | 5+ агентов (Claude Code) в git-worktree + tmux, переживающий ребут | `infra/` |
+| Экспонат                     | Что показывает                                                                                              | Где                                                  |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| **Свой harness**             | цель → план → действия → проверка → рефайн → эскалация → rollback, память, автозаполнение всех полей товара | `src/agent-harness/`, панель в форме `/ads/:id/edit` |
+| **Eval Lab**                 | измеримое сравнение «модель × политика harness»: avg score, success-rate, токены                            | страница `/lab`                                      |
+| **Параллельная оркестрация** | 5+ агентов (Claude Code) в git-worktree + tmux, переживающий ребут                                          | `infra/`                                             |
 
 ## Часть 1. Продуктовое приложение
 
@@ -118,11 +119,13 @@
 функционал. Строгий TypeScript (без `any`, без `enum` — включён `erasableSyntaxOnly`).
 
 ### Agentic loop
+
 Цель → **план (goal-graph)** → исполнение шага под контролем → **верификация** результата → при провале
 **рефайн** по фидбеку → **эскалация** (сильная модель или needs-human) → применение патча → запись в
 **evidence**. Перед каждым шагом снимается **snapshot** для отката.
 
 ### Модули
+
 - `goal-graph.ts` — цель как **DAG**: топологические слои (Kahn), независимые шаги исполняются
   параллельно. Линейный план — частный случай (цепочка), поэтому исполнитель один на оба режима.
 - `runner.ts` — исполнитель: per-step **timeout**, **ретраи** на сбой, **бюджет токенов**, цикл
@@ -140,6 +143,7 @@
 - `snapshot.ts` — снимки состояния и откат.
 
 ### UI
+
 `src/features/edit/AgentHarnessPanel.tsx` (+ `useAgentHarness.ts`) — панель «AI-агент · plan mode» в форме
 редактирования: план со статусами шагов, live evidence-лог, список снимков с кнопкой **«Откатить сюда»**,
 блок памяти.
@@ -153,7 +157,8 @@
 `Sonnet naive` (verify/ретраи выключены), `Haiku+harness`, `Ollama qwen3+harness`.
 
 Зачем: измеримо показать **вклад самого harness** (verify on/off на одной модели) и тезис «открытая модель
-+ harness против фронтира-naive». Скорер детерминированный — сравнение воспроизводимо.
+
+- harness против фронтира-naive». Скорер детерминированный — сравнение воспроизводимо.
 
 ## Часть 4. Параллельная оркестрация 5+ агентов
 
@@ -227,15 +232,18 @@ git worktrees, Claude Code.
 ## Установка и запуск
 
 ### Предварительные требования
+
 - Node.js `20+`, npm.
 - Бэкенд модели: **OmniRoute** (OpenAI-совместимый шлюз) на `:20128` — по умолчанию; либо **Ollama** с
   моделью `qwen3:8b` как фолбэк/офлайн.
 
 ### Веб-приложение + harness
+
 ```bash
 npm install
 npm run dev          # клиент http://localhost:5173/ads  +  backend http://localhost:8080
 ```
+
 - harness-агент: `/ads/:id/edit` → секция «AI-агент · plan mode»;
 - evals: `/lab`.
 
@@ -243,17 +251,20 @@ npm run dev          # клиент http://localhost:5173/ads  +  backend http:/
 Через Docker: `docker compose up --build`.
 
 ### Ollama-фолбэк (опционально)
+
 ```bash
 ollama serve && ollama pull qwen3:8b
 ```
 
 ### 5 параллельных агентов (опционально, WSL2 Ubuntu)
+
 ```bash
 # в Ubuntu, из корня репозитория:
 cp infra/tmux.conf ~/.tmux.conf
 git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm   # затем prefix+I в tmux
 bash infra/spawn-agents.sh 5
 ```
+
 Подробно — [`infra/README.md`](infra/README.md).
 
 ## Переменные окружения
@@ -316,9 +327,18 @@ curl -X PUT "http://localhost:8080/items/el-001" -H "Content-Type: application/j
 }'
 ```
 
-## Что дальше
+cat infra/tasks/QUEUE.md
+bash infra/claim.sh task-1
+bash infra/claim.sh task-1
 
-- включить Zep + Graphiti как основной backend памяти (сейчас по умолчанию локальный flat-vector);
-- собрать живые цифры для `docs/HARNESS-COMPARISON.md`, прогнав OpenHands и OpenCode по разу;
-- авто-quarantine падающих провайдеров модели и явная индикация фолбэка в evidence;
-- e2e-тесты и публичный деплой связки frontend + backend.
+1
+Создай docs/NOTES.md: краткий обзор проекта в 3 абзацах.
+
+2
+Сгенерируй CHANGELOG.md из git log, сгруппируй по смыслу.
+
+3
+Добавь в README.md секцию FAQ: 4 вопроса-ответа по запуску.
+
+git -C .worktrees/agent-1 status --short
+git -C .worktrees/agent-3 status --short

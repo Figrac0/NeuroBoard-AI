@@ -190,22 +190,12 @@ const fillAttributesTool: AgentTool<FormParamValues> = {
     }
   },
   verify({ values, language }) {
-    const isRu = language === 'ru'
     const fields = getFieldConfig(values.category, language)
-    const missing = fields.filter((field) => !values.params[field.key]?.trim())
-    const score = fields.length === 0 ? 1 : (fields.length - missing.length) / fields.length
-
-    if (score >= 0.5) {
-      return { ok: true, score, feedback: '' }
-    }
-
-    return {
-      ok: false,
-      score,
-      feedback: isRu
-        ? `Не хватает характеристик: ${missing.map((field) => field.label).join(', ')}`
-        : `Missing attributes: ${missing.map((field) => field.label).join(', ')}`,
-    }
+    const filled = fields.filter((field) => values.params[field.key]?.trim()).length
+    const score = fields.length === 0 ? 1 : filled / fields.length
+    // Best-effort: модель заполняет то, что выводимо из текста; недостающее (год, пробег и т.п.)
+    // остаётся продавцу и не повод эскалировать весь прогон. Незаполненное ловит баннер «требует доработки».
+    return { ok: true, score, feedback: '' }
   },
 }
 

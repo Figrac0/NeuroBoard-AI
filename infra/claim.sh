@@ -18,7 +18,7 @@ for _ in $(seq 1 50); do
     trap 'rmdir "$LOCK"' EXIT
     if grep -q "\[ \] $TASK_ID" "$QUEUE"; then
       # Single writer inside the lock: mark the task as claimed.
-      sed -i "s/\[ \] $TASK_ID/[~] $TASK_ID (claimed by $WHO)/" "$QUEUE"
+      sed -i "s|\[ \] $TASK_ID|[~] $TASK_ID (claimed by $WHO)|" "$QUEUE"
       echo "Claimed $TASK_ID as $WHO"
       exit 0
     fi
